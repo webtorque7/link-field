@@ -1,0 +1,3 @@
+LeftAndMain:
+  extra_requirements_javascript:
+    - "link-field/javascript/WTLinkField.js"

@@ -1,15 +1,11 @@
 <?php
-/**
- * Extends Tree Dropdown Field {@Link TreeDropdownField} so it works as a subfield of another field
- * Class WTTreeDropdownField
- */
 class WTTreeDropdownField extends TreeDropdownField
 {
 
         /**
          * Return a Link to this field
          */
-        function Link($action = null) {
+        public function Link($action = null) {
                 $name = $this->name;
 
                 if (($pos = stripos($name, '[')) !== false) {
