@@ -21,11 +21,11 @@ class WTLink extends DBField implements CompositeDBField
 	 */
 	private static $composite_db = array(
 		"Type" => "Enum('Internal, External, Email, File', 'Internal')",
-		"Internal" => 'Int',
+		"Internal" => 'Varchar',
 		"External" => 'Varchar(255)',
 		"Email" => 'Varchar(255)',
-		"File" => 'Int',
-		'TargetBlank' => 'Boolean',
+		"File" => 'Varchar',
+		'TargetBlank' => 'Varchar',
 		'Anchor' => 'Varchar(100)'
 	);
 
@@ -146,7 +146,7 @@ class WTLink extends DBField implements CompositeDBField
 	}
 
 	public function getInternal() {
-		return $this->internal;
+		return (int)$this->internal;
 	}
 
 
@@ -184,7 +184,7 @@ class WTLink extends DBField implements CompositeDBField
 	}
 
 	public function getFile() {
-		return $this->file;
+		return (int)$this->file;
 	}
 
 	public function setTargetBlank($value, $markChanged = true) {
@@ -195,7 +195,7 @@ class WTLink extends DBField implements CompositeDBField
 	}
 
 	public function getTargetBlank() {
-		return $this->targetBlank;
+		return (int)$this->targetBlank;
 	}
 
 	public function setAnchor($value, $markChanged = true) {
@@ -210,7 +210,7 @@ class WTLink extends DBField implements CompositeDBField
 	}
 
 
-	function exists() {
+	public function exists() {
 		return ($this->getType());
 	}
 
