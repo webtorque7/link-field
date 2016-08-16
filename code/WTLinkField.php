@@ -10,8 +10,16 @@ class WTLinkField extends TextField {
 		'tree', 'InternalTree', 'FileTree'
 	);
 
-	protected $fieldField = null, $internalField = null, $externalField = null, $emailField = null, $fileField = null, $anchorField = null, $targetBlankField = null;
-	/**
+	protected $fieldField = null,
+        $internalField = null,
+        $externalField = null,
+        $emailField = null,
+        $fileField = null,
+        $anchorField = null,
+        $targetBlankField = null,
+        $extraField = null;
+
+    /**
 	 * @var FormField
 	 */
 	protected $fieldType = null;
@@ -36,14 +44,17 @@ class WTLinkField extends TextField {
 		);
 
 		$this->fieldLink = new CompositeField(
-			$this->internalField = new WTTreeDropdownField("{$name}[Internal]", _t('HtmlEditorField.Internal', 'Internal'), 'SiteTree', 'ID', 'Title', true),
-			$this->externalField = new TextField("{$name}[External]", _t('HtmlEditorField.URL', 'URL'), 'http://'),
-			$this->emailField = new EmailField("{$name}[Email]", _t('HtmlEditorField.EMAIL', 'Email address')),
-			$this->fileField = new WTTreeDropdownField("{$name}[File]", _t('HtmlEditorField.FILE', 'File'), 'File', 'ID', 'Title', true),
-			$this->anchorField = new TextField("{$name}[Anchor]", 'Anchor (optional)'),
-			$this->targetBlankField = new CheckboxField("{$name}[TargetBlank]", _t('HtmlEditorField.LINKOPENNEWWIN', 'Open link in a new window?'))
+			$this->internalField = WTTreeDropdownField::create("{$name}[Internal]", _t('HtmlEditorField.Internal', 'Internal'), 'SiteTree', 'ID', 'Title', true),
+			$this->externalField = TextField::create("{$name}[External]", _t('HtmlEditorField.URL', 'URL'), 'http://'),
+			$this->emailField = EmailField::create("{$name}[Email]", _t('HtmlEditorField.EMAIL', 'Email address')),
+			$this->fileField = WTTreeDropdownField::create("{$name}[File]", _t('HtmlEditorField.FILE', 'File'), 'File', 'ID', 'Title', true),
+            $this->extraField = TextField::create("{$name}[Extra]", 'Extra(optional)')
+                ->setDescription('Appended to url. Use to add sub-urls/actions or query string to the url, e.g. ?param=value'),
+            $this->anchorField = TextField::create("{$name}[Anchor]", 'Anchor (optional)'),
+			$this->targetBlankField = CheckboxField::create("{$name}[TargetBlank]", _t('HtmlEditorField.LINKOPENNEWWIN', 'Open link in a new window?'))
 		);
 
+        $this->extraField->addExtraClass('no-hide');
 		$this->anchorField->addExtraClass('no-hide');
 		$this->targetBlankField->addExtraClass('no-hide');
 
@@ -90,7 +101,8 @@ class WTLinkField extends TextField {
 				"Email" => $this->emailField->Value(),
 				"File" => $this->fileField->Value(),
 				"Anchor" => $this->anchorField->Value(),
-				"TargetBlank" => $this->targetBlankField->Value()
+				"TargetBlank" => $this->targetBlankField->Value(),
+                "Extra" => $this->extraField->Value()
 			));
 		} else {
 			if (!empty($dataObject->$fieldName)) {
@@ -101,6 +113,7 @@ class WTLinkField extends TextField {
 				$dataObject->$fieldName->setFile($this->fileField->Value());
 				$dataObject->$fieldName->setAnchor($this->anchorField->Value());
 				$dataObject->$fieldName->setTargetBlank($this->targetBlankField->Value());
+                $dataObject->$fieldName->setExtra($this->extraField->Value());
 			}
 		}
 	}
@@ -116,6 +129,7 @@ class WTLinkField extends TextField {
 			$this->fileField->setValue($val['File']);
 			$this->anchorField->setValue($val['Anchor']);
 			$this->targetBlankField->setValue(isset($val['TargetBlank']) ? $val['TargetBlank'] : false);
+            $this->extraField->setValue($val['Extra']);
 		} elseif($val instanceof WTLink) {
 			$this->fieldType->setValue($val->getType());
 			$this->internalField->setValue($val->getInternal());
@@ -124,6 +138,7 @@ class WTLinkField extends TextField {
 			$this->fileField->setValue($val->getFile());
 			$this->anchorField->setValue($val->getAnchor());
 			$this->targetBlankField->setValue($val->getTargetBlank());
+            $this->extraField->setValue($val->getExtra());
 		}
 
 		return $this;
