@@ -17,6 +17,7 @@ class WTLinkField extends TextField {
         $fileField = null,
         $anchorField = null,
         $targetBlankField = null,
+        $dataObjectField = null,
         $extraField = null;
 
     /**
@@ -28,6 +29,14 @@ class WTLinkField extends TextField {
 	 * @var FormField
 	 */
 	protected $fieldLink = null;
+
+
+    /**
+     * Used to cache data objects so we don't have to lookup more than once
+     *
+     * @var array
+     */
+    private static $linkable_data_objects = null;
 
 	public function __construct($name, $title = null, $value = "") {
 		// naming with underscores to prevent values from actually being saved somewhere
@@ -43,6 +52,7 @@ class WTLinkField extends TextField {
 			'Internal'
 		);
 
+
 		$this->fieldLink = new CompositeField(
 			$this->internalField = WTTreeDropdownField::create("{$name}[Internal]", _t('HtmlEditorField.Internal', 'Internal'), 'SiteTree', 'ID', 'Title', true),
 			$this->externalField = TextField::create("{$name}[External]", _t('HtmlEditorField.URL', 'URL'), 'http://'),
@@ -53,6 +63,48 @@ class WTLinkField extends TextField {
             $this->anchorField = TextField::create("{$name}[Anchor]", 'Anchor (optional)'),
 			$this->targetBlankField = CheckboxField::create("{$name}[TargetBlank]", _t('HtmlEditorField.LINKOPENNEWWIN', 'Open link in a new window?'))
 		);
+
+        if ($linkableDataObjects = WTLink::get_data_object_types()) {
+
+            if (!($objects = self::$linkable_data_objects)) {
+                $objects = array();
+
+                foreach ($linkableDataObjects as $className) {
+                    $classObjects = array();
+
+                    //set the format for DO value -> ClassName-ID
+                    foreach (DataList::create($className) as $object) {
+                        $classObjects[$className . '-' . $object->ID] = $object->Title;
+                    }
+
+                    if (!empty($classObjects)) {
+                        $objects[singleton($className)->i18n_singular_name()] = $classObjects;
+                    }
+                }
+            }
+
+            if (count($objects)) {
+                $this->fieldType->setSource(
+                    array_merge(
+                        $this->fieldType->getSource(),
+                        array(
+                            'DataObject' => _t('WTLinkField.LINKDATAOBJECT', 'Data Object'),
+                        )
+                    )
+                );
+
+                $this->fieldLink->insertBefore(
+                    "{$name}[Extra]",
+                    $this->dataObjectField = GroupedDropdownField::create(
+                        "{$name}[DataObject]",
+                        _t('WTLinkField.LINKDATAOBJECT', 'Link to a Data Object'),
+                        $objects
+                    )
+                );
+            }
+
+            self::$linkable_data_objects = $objects;
+        }
 
         $this->extraField->addExtraClass('no-hide');
 		$this->anchorField->addExtraClass('no-hide');
@@ -102,7 +154,8 @@ class WTLinkField extends TextField {
 				"File" => $this->fileField->Value(),
 				"Anchor" => $this->anchorField->Value(),
 				"TargetBlank" => $this->targetBlankField->Value(),
-                "Extra" => $this->extraField->Value()
+                "Extra" => $this->extraField->Value(),
+                "DataObject" => $this->dataObjectField->Value()
 			));
 		} else {
 			if (!empty($dataObject->$fieldName)) {
@@ -114,6 +167,7 @@ class WTLinkField extends TextField {
 				$dataObject->$fieldName->setAnchor($this->anchorField->Value());
 				$dataObject->$fieldName->setTargetBlank($this->targetBlankField->Value());
                 $dataObject->$fieldName->setExtra($this->extraField->Value());
+                $dataObject->$fieldName->setDataObject($this->dataObjectField->Value());
 			}
 		}
 	}
@@ -130,6 +184,7 @@ class WTLinkField extends TextField {
 			$this->anchorField->setValue($val['Anchor']);
 			$this->targetBlankField->setValue(isset($val['TargetBlank']) ? $val['TargetBlank'] : false);
             $this->extraField->setValue($val['Extra']);
+            $this->dataObjectField->setValue($val['DataObject']);
 		} elseif($val instanceof WTLink) {
 			$this->fieldType->setValue($val->getType());
 			$this->internalField->setValue($val->getInternal());
@@ -139,6 +194,7 @@ class WTLinkField extends TextField {
 			$this->anchorField->setValue($val->getAnchor());
 			$this->targetBlankField->setValue($val->getTargetBlank());
             $this->extraField->setValue($val->getExtra());
+            $this->dataObjectField->setValue($val->getDataObject());
 		}
 
 		return $this;

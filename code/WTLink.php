@@ -2,7 +2,7 @@
 
 class WTLink extends DBField implements CompositeDBField
 {
-    protected $type, $internal, $external, $email, $file, $targetBlank, $anchor, $extra;
+    protected $type, $internal, $external, $email, $file, $targetBlank, $anchor, $extra, $dataObject;
 
     protected $link;
 
@@ -12,13 +12,14 @@ class WTLink extends DBField implements CompositeDBField
      * @param array
      */
     private static $composite_db = array(
-        "Type" => "Enum('Internal, External, Email, File', 'Internal')",
+        "Type" => "Enum('Internal, External, Email, File, DataObject', 'Internal')",
         "Internal" => 'Varchar',
         "External" => 'Varchar(255)',
         "Extra" => 'Varchar(255)',
         "Email" => 'Varchar(255)',
         "File" => 'Varchar',
         'TargetBlank' => 'Varchar',
+        'DataObject' => 'Varchar(255)',
         'Anchor' => 'Varchar(100)'
     );
 
@@ -48,6 +49,7 @@ class WTLink extends DBField implements CompositeDBField
             $this->setTargetBlank($value->getTargetBlank(), $markChanged);
             $this->setAnchor($value->getAnchor(), $markChanged);
             $this->setExtra($value->getExtra(), $markChanged);
+            $this->setDataObject($value->getDataObject(), $markChanged);
 
             if ($markChanged) {
                 $this->isChanged = true;
@@ -81,6 +83,9 @@ class WTLink extends DBField implements CompositeDBField
                 if (isset($record[$this->name . 'Extra'])) {
                     $this->setExtra($record[$this->name . 'Extra'], $markChanged);
                 }
+                if (isset($record[$this->name . 'DataObject'])) {
+                    $this->setDataObject($record[$this->name . 'DataObject'], $markChanged);
+                }
             } else {
                 $this->value = $this->nullValue();
             }
@@ -111,6 +116,9 @@ class WTLink extends DBField implements CompositeDBField
             }
             if (array_key_exists('Extra', $value)) {
                 $this->setExtra($value['Extra'], $markChanged);
+            }
+            if (array_key_exists('DataObject', $value)) {
+                $this->setDataObject($value['DataObject'], $markChanged);
             }
             if ($markChanged) {
                 $this->isChanged = true;
@@ -165,6 +173,22 @@ class WTLink extends DBField implements CompositeDBField
     public function setExtra($v, $markChanged = true)
     {
         $this->extra = $v;
+
+        if ($markChanged) {
+            $this->isChanged = true;
+        }
+
+        return $this;
+    }
+
+    public function getDataObject()
+    {
+        return $this->dataObject;
+    }
+
+    public function setDataObject($v, $markChanged = true)
+    {
+        $this->dataObject = $v;
 
         if ($markChanged) {
             $this->isChanged = true;
@@ -333,6 +357,15 @@ class WTLink extends DBField implements CompositeDBField
                 $this->getExtra()
             )->nullValue();
         }
+
+        if ($this->getDataObject()) {
+            $manipulation['fields'][$this->name . 'DataObject'] = $this->prepValueForDB($this->getDataObject());
+        } else {
+            $manipulation['fields'][$this->name . 'DataObject'] = DBField::create_field(
+                'Varchar',
+                $this->getDataObject()
+            )->nullValue();
+        }
     }
 
     public function addToQuery(&$query)
@@ -345,8 +378,14 @@ class WTLink extends DBField implements CompositeDBField
         $query->selectField(sprintf('"%sTargetBlank"', $this->name));
         $query->selectField(sprintf('"%sAnchor"', $this->name));
         $query->selectField(sprintf('"%sExtra"', $this->name));
+        $query->selectField(sprintf('"%sDataObject"', $this->name));
     }
 
+    /**
+     * Determines the link by the type and what is set
+     *
+     * @return mixed|string
+     */
     public function Link()
     {
         $link = '';
@@ -366,6 +405,12 @@ class WTLink extends DBField implements CompositeDBField
                 if ($this->file) {
                     $link = File::get()->byID($this->file)->Filename;
                 }
+                break;
+            case 'DataObject':
+                if ($do = $this->getDO()) {
+                    $link = $do->Link();
+                }
+                break;
         }
 
         if ($this->extra) {
@@ -384,6 +429,13 @@ class WTLink extends DBField implements CompositeDBField
         return $link;
     }
 
+    /**
+     * Creates the anchor tag, if $text is it is put inside the anchor tag, otherwise it only returns
+     * the opening of the ancor tag
+     *
+     * @param string|null $text
+     * @return string
+     */
     public function Tag($text = null)
     {
         $link = $this->Link();
@@ -398,4 +450,38 @@ class WTLink extends DBField implements CompositeDBField
 
         return '';
     }
+
+    /**
+     * Get the DataObject instance
+     *
+     * @return DataObject|null
+     */
+    public function getDO()
+    {
+        if (!empty($this->dataObject)) {
+            list($className, $ID) = explode('-', $this->dataObject);
+
+            return DataList::create($className)->byID($ID);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get DataObject classes which can be used for linking, uses config WTLink.data_objects,
+     * falls back to looking up classes which have implemented the WTLinkableInterface
+     *
+     * @return array|mixed
+     */
+    public static function get_data_object_types()
+    {
+        //first check if a list of data objects has been configured
+        $configured = static::config()->data_objects;
+
+        if ($configured) return $configured;
+
+        //if no config, use classes which implement WTLinkableInterface
+        return ClassInfo::implementorsOf(WTLinkableInterface::class);
+    }
+
 }
