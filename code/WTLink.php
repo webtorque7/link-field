@@ -481,7 +481,7 @@ class WTLink extends DBField implements CompositeDBField
         if ($configured) return $configured;
 
         //if no config, use classes which implement WTLinkableInterface
-        return ClassInfo::implementorsOf(WTLinkableInterface::class);
+        return ClassInfo::implementorsOf('WTLinkableInterface');
     }
 
 }
